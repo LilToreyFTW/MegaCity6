@@ -68,27 +68,35 @@ export default function Home() {
 
       if (loginBtn) {
         loginBtn.addEventListener('click', async () => {
-          try {
-            const usernameEl = document.getElementById('username')
-            if (!usernameEl) {
-              console.error('Username input not found')
-              return
-            }
-            
-            const username = usernameEl.value.trim()
-            if (!username) {
-              if (authError) {
-              authError.textContent = 'Please enter a username'
+          const usernameEl = document.getElementById('login-username')
+          const passwordEl = document.getElementById('login-password')
+          const authError = document.getElementById('auth-error')
+
+          if (!usernameEl || !passwordEl) {
+            if (authError) {
+              authError.textContent = 'Please fill in all fields'
               authError.style.display = 'block'
-              return
             }
+            return
+          }
 
-            // Show loading state
-            loginBtn.textContent = 'Logging in...'
-            loginBtn.disabled = true
-            if (authError) authError.style.display = 'none'
+          const username = usernameEl.value.trim()
+          const password = passwordEl.value.trim()
 
-            try {
+          if (!username || !password) {
+            if (authError) {
+              authError.textContent = 'Please enter username and password'
+              authError.style.display = 'block'
+            }
+            return
+          }
+
+          // Show loading state
+          loginBtn.textContent = 'Logging in...'
+          loginBtn.disabled = true
+          if (authError) authError.style.display = 'none'
+
+          try {
             const result = await gameDatabase.loginPlayer(username)
             if (result.success) {
               console.log('Login successful, starting game...')
@@ -103,7 +111,6 @@ export default function Home() {
               loginBtn.textContent = 'Enter Game'
               loginBtn.disabled = false
             }
-          }
           }
         })
       }
@@ -557,6 +564,8 @@ export default function Home() {
       <Script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" strategy="beforeInteractive" />
       <Script src="/database.js" strategy="afterInteractive" />
       <Script src="/game.js" strategy="afterInteractive" />
+      <Script src="/cityGenerator.js" strategy="afterInteractive" />
+      <Script src="/soundEffects.js" strategy="afterInteractive" />
       <Script src="/multiplayer.js" strategy="afterInteractive" />
       <Script src="/battlepass.js" strategy="afterInteractive" />
       <Script src="/gangs.js" strategy="afterInteractive" />

@@ -1,0 +1,131 @@
+{
+  "syntax": {
+    "public/completeGame.js": {
+      "status": "PASS",
+      "error": null
+    },
+    "public/advancedAnimations.js": {
+      "status": "PASS",
+      "error": null
+    },
+    "public/emoteMenu.js": {
+      "status": "PASS",
+      "error": null
+    },
+    "public/emoteAssets.js": {
+      "status": "PASS",
+      "error": null
+    },
+    "public/soundEffects.js": {
+      "status": "PASS",
+      "error": null
+    },
+    "public/cityGenerator.js": {
+      "status": "PASS",
+      "error": null
+    },
+    "test/comprehensiveStressTest.js": {
+      "status": "PASS",
+      "error": null
+    }
+  },
+  "build": {
+    "status": "PASS",
+    "output": "\n> megacity6@1.0.0 build\n> next build\n\n  ▲ Next.js 14.2.35\n  - Environments: .env.local\n\n   Linting and checking validity of types ...\n   Creating an optimized production build ...\n ✓ Compiled successfully\n   Collecting page data ...\n   Generating static pages (0/5) ...\n   Generating static pages (1/5) \r\n   Generating static pages (2/5) \r\n   Generating static pages (3/5) \r\n ✓ Generating static pages (5/5)\n   Finalizing page optimization ...\n   Collecting build traces ...\n\nRoute (pages)                             Size     First Load JS\n┌ ○ /                                     4.65 kB        87.9 kB\n├ ○ /404                                  180 B          80.1 kB\n├ ƒ /api/database/setup                   0 B            79.9 kB\n├ ƒ /api/leaderboard/get                  0 B            79.9 kB\n├ ƒ /api/players/login                    0 B            79.9 kB\n├ ƒ /api/players/register                 0 B            79.9 kB\n├ ƒ /api/players/update                   0 B            79.9 kB\n├ ƒ /api/server                           0 B            79.9 kB\n├ ƒ /api/test/stress-endpoint             0 B            79.9 kB\n├ ○ /play                                 1.86 kB        85.1 kB\n└ ○ /stress-test                          1.45 kB        84.7 kB\n+ First Load JS shared by all             79.9 kB\n  ├ chunks/framework-64ad27b21261a9ce.js  44.8 kB\n  ├ chunks/main-d979f5fb3aa68004.js       34 kB\n  └ other shared chunks (total)           1.01 kB\n\n○  (Static)   prerendered as static content\nƒ  (Dynamic)  server-rendered on demand\n\n"
+  },
+  "runtime": {
+    "Module Loading": {
+      "status": "PASS",
+      "error": null
+    },
+    "Class Instantiation": {
+      "status": "PASS",
+      "error": null
+    },
+    "Method Execution": {
+      "status": "PASS",
+      "error": null
+    },
+    "Event Handling": {
+      "status": "PASS",
+      "error": null
+    },
+    "Memory Management": {
+      "status": "PASS",
+      "error": null
+    },
+    "Error Handling": {
+      "status": "PASS",
+      "error": null
+    },
+    "Async Operations": {
+      "status": "PASS",
+      "error": null
+    },
+    "DOM Manipulation": {
+      "status": "PASS",
+      "error": null
+    },
+    "Audio Context": {
+      "status": "PASS",
+      "error": null
+    },
+    "Canvas Operations": {
+      "status": "PASS",
+      "error": null
+    }
+  },
+  "performance": {
+    "Animation Performance": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "Asset Loading": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "Memory Usage": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "CPU Usage": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "Network Requests": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "Rendering Speed": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "Database Operations": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "Event Loop Lag": {
+      "status": "FAIL",
+      "duration": 0,
+      "error": null
+    },
+    "Garbage Collection": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    },
+    "Frame Rate": {
+      "status": "PASS",
+      "duration": 0,
+      "error": null
+    }
+  },
+  "summary": {}
+}

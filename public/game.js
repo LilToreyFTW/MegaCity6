@@ -99,14 +99,27 @@ class GTA6Game {
     
     init() {
         this.setupScene();
-        this.setupLighting();
+        this.createAudio();
         this.createCity();
         this.createCharacter();
         this.createVehicle();
         this.setupControls();
         this.setupCamera();
-        this.createAudio();
         this.animate();
+        
+        // Initialize city generator
+        this.cityGenerator = new CityGenerator(this);
+        this.cityGenerator.generateCompleteCity();
+        
+        // Initialize sound effects
+        this.soundEffects = new SoundEffectsSystem(this);
+        this.soundEffects.initialize().then(() => {
+            console.log('🔊 Sound system ready');
+            // Start ambient sounds
+            this.soundEffects.playAmbient('trafficHum');
+            this.soundEffects.playAmbient('crowdMurmur');
+            this.soundEffects.playAmbient('wind');
+        });
         
         setTimeout(() => {
             const loadingEl = document.getElementById('loading-screen')
