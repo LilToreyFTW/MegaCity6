@@ -61,7 +61,35 @@ class GTA6Game {
         this.policeCars = [];
         this.policeOfficers = [];
         this.lastCrimeTime = 0;
-        this.crimeCooldown = 5000;
+        // Multiplayer integration
+        this.multiplayer = null;
+        this.characterHealth = 100;
+        this.characterArmor = 0;
+        
+        // Override shooting for multiplayer
+        this.originalShoot = this.shoot;
+        this.shoot = this.multiplayerShoot;
+        
+        // Gang system integration
+        this.gangs = null;
+        this.battlePass = null;
+        this.paused = false;
+        
+        // Special effects
+        this.doubleXP = false;
+        this.godMode = false;
+        this.vip = false;
+        
+        // Character animation system integration
+        this.characterAnimations = null;
+        
+        // Animation states
+        this.isJumping = false;
+        this.isShooting = false;
+        this.isDriving = false;
+        this.isDancing = false;
+        this.isWaving = false;
+        this.isSurrendering = false;
         
         this.init();
     }
@@ -674,13 +702,13 @@ class GTA6Game {
                 const mouseX = (e.clientX / window.innerWidth) * 2 - 1;
                 const mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
                 
-                // Rotate vehicle based on mouse position
-                this.steerAngle = mouseX * 0.3;
+                // Rotate vehicle based on mouse position (normal direction)
+                this.steerAngle = -mouseX * 0.3;
             } else if (this.character) {
                 const mouseX = (e.clientX / window.innerWidth) * 2 - 1;
                 
-                // Rotate character based on mouse position
-                this.character.rotation.y = mouseX * Math.PI;
+                // Rotate character based on mouse position (normal direction)
+                this.character.rotation.y = -mouseX * Math.PI;
             }
         });
         
@@ -703,9 +731,15 @@ class GTA6Game {
             this.inVehicle = false;
             this.character.visible = true;
             this.character.position.copy(this.vehicle.position);
-            this.character.position.x += 5;
-            this.character.position.y = 2;
+            this.character.position.x += 2;
+            this.character.position.z += 2;
             this.mission = "On Foot";
+            this.isDriving = false;
+            
+            // Trigger idle animation
+            if (this.characterAnimations) {
+                this.characterAnimations.setAnimation('idle');
+            }
         } else {
             // Enter vehicle
             const distance = this.character.position.distanceTo(this.vehicle.position);
@@ -713,28 +747,140 @@ class GTA6Game {
                 this.inVehicle = true;
                 this.character.visible = false;
                 this.mission = "In Vehicle";
+                this.isDriving = true;
+                
+                // Trigger driving animation
+                if (this.characterAnimations) {
+                    this.characterAnimations.setAnimation('drive');
+                }
             } else {
                 this.mission = "Too far from vehicle";
             }
         }
     }
     
+    multiplayerShoot() {
+        if (!this.character || this.inVehicle) return;
+        
+        const weapon = this.weapons[this.currentWeapon];
+        const currentTime = Date.now();
+        
+        // Check fire rate
+        if (currentTime - this.lastShotTime < weapon.fireRate) return;
+        
+        // Check ammo
+        if (weapon.ammo <= 0) {
+            this.mission = "Out of ammo!";
+            return;
+        }
+        
+        // Shoot
+        weapon.ammo--;
+        this.lastShotTime = currentTime;
+        
+        // Trigger shoot animation
+        if (this.characterAnimations) {
+            this.characterAnimations.setAnimation('shoot');
+        }
+        
+        // Create bullet data for multiplayer
+        const bulletData = {
+            position: {
+                x: this.character.position.x,
+                y: this.character.position.y + 3.5,
+                z: this.character.position.z
+            },
+            velocity: {
+                x: 0,
+                y: 0,
+                z: -50
+            },
+            damage: weapon.damage,
+            range: weapon.range,
+            weapon: this.currentWeapon
+        };
+        
+        // Apply character rotation to bullet velocity
+        const forward = new THREE.Vector3(0, 0, -50);
+        forward.applyQuaternion(this.character.quaternion);
+        bulletData.velocity.x = forward.x;
+        bulletData.velocity.y = forward.y;
+        bulletData.velocity.z = forward.z;
+        
+        // Send to multiplayer server
+        if (this.multiplayer && this.multiplayer.connected) {
+            this.multiplayer.sendShoot(bulletData);
+        } else {
+            // Single player bullet creation
+            this.createBullet();
+        }
+        
+        // Play gunshot sound
+        this.playGunshotSound();
+        
+        // Add recoil
+        this.addRecoil();
+        
+        // Check for crime
+        if (this.currentWeapon !== 'pistol') {
+            this.commitCrime('shooting');
+        }
+        
+        this.mission = `${weapon.name} - Ammo: ${weapon.ammo}`;
+    }
+    
+    updateHealthDisplay() {
+        // Update health display if needed
+        const healthDisplay = document.getElementById('health') || this.createHealthDisplay();
+        healthDisplay.textContent = `Health: ${this.characterHealth}`;
+        healthDisplay.style.color = this.characterHealth > 50 ? '#00ff00' : 
+                                   this.characterHealth > 25 ? '#ffff00' : '#ff0000';
+    }
+    
+    createHealthDisplay() {
+        const healthDiv = document.createElement('div');
+        healthDiv.id = 'health';
+        healthDiv.className = 'hud-element';
+        healthDiv.style.top = '60px';
+        healthDiv.style.right = '20px';
+        healthDiv.style.fontSize = '18px';
+        healthDiv.style.fontWeight = 'bold';
+        healthDiv.style.textShadow = '2px 2px 4px rgba(0,0,0,0.8)';
+        document.getElementById('hud').appendChild(healthDiv);
+        return healthDiv;
+    }
+    
     jump() {
         this.isJumping = true;
         this.jumpVelocity = 8;
         this.mission = "Jumping!";
-    }
-    
-    startRunning() {
-        if (this.stamina > 10) {
-            this.isRunning = true;
-            this.mission = "Running!";
+        
+        // Trigger jump animation
+        if (this.characterAnimations) {
+            this.characterAnimations.setAnimation('jump');
         }
     }
     
     stopRunning() {
         this.isRunning = false;
         this.mission = "On Foot";
+        
+        // Return to idle animation
+        if (this.characterAnimations) {
+            this.characterAnimations.setAnimation('idle');
+        }
+    }
+    
+    startRunning() {
+        if (this.stamina > 10) {
+            this.isRunning = true;
+            this.mission = "Running!";
+            
+            // Trigger run animation
+            if (this.characterAnimations) {
+                this.characterAnimations.setAnimation('run');
+            }
+        }
     }
     
     setupWeaponSystem() {
@@ -1339,18 +1485,23 @@ class GTA6Game {
         // Handle character movement
         const moveVector = new THREE.Vector3();
         let currentSpeed = this.characterSpeed;
+        let isMoving = false;
         
         if (this.controls['KeyW']) {
             moveVector.z -= 1;
+            isMoving = true;
         }
         if (this.controls['KeyS']) {
             moveVector.z += 1;
+            isMoving = true;
         }
         if (this.controls['KeyA']) {
             moveVector.x -= 1;
+            isMoving = true;
         }
         if (this.controls['KeyD']) {
             moveVector.x += 1;
+            isMoving = true;
         }
         
         // Handle running
@@ -1375,6 +1526,19 @@ class GTA6Game {
             this.character.rotation.x = Math.sin(walkCycle) * 0.05;
         }
         
+        // Update animation based on movement
+        if (this.characterAnimations) {
+            if (isMoving) {
+                if (this.isRunning) {
+                    this.characterAnimations.setAnimation('run');
+                } else {
+                    this.characterAnimations.setAnimation('walk');
+                }
+            } else if (!this.isJumping) {
+                this.characterAnimations.setAnimation('idle');
+            }
+        }
+        
         // Normalize and apply speed
         if (moveVector.length() > 0) {
             moveVector.normalize();
@@ -1392,6 +1556,11 @@ class GTA6Game {
                 this.character.position.y = 2;
                 this.isJumping = false;
                 this.jumpVelocity = 0;
+                
+                // Return to idle animation after landing
+                if (this.characterAnimations) {
+                    this.characterAnimations.setAnimation('idle');
+                }
             }
         }
         
@@ -1755,6 +1924,136 @@ class GTA6Game {
         });
     }
     
+    unlockCosmetic(cosmetic) {
+        // Store unlocked cosmetics
+        if (!this.unlockedCosmetics) {
+            this.unlockedCosmetics = new Set();
+        }
+        this.unlockedCosmetics.add(cosmetic.name);
+        
+        // Apply cosmetic to character model
+        this.applyCosmeticToCharacter(cosmetic);
+        
+        console.log(`👔 Unlocked cosmetic: ${cosmetic.name}`);
+    }
+    
+    applyCosmeticToCharacter(cosmetic) {
+        if (!this.character) return;
+        
+        // Create cosmetic accessory
+        const accessory = this.createCosmeticAccessory(cosmetic);
+        if (accessory) {
+            this.character.add(accessory);
+        }
+    }
+    
+    createCosmeticAccessory(cosmetic) {
+        const accessoryGroup = new THREE.Group();
+        
+        switch (cosmetic.slot) {
+            case 'head':
+                const headwear = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.6, 0.3, 1.6),
+                    new THREE.MeshLambertMaterial({ color: this.getCosmeticColor(cosmetic.rarity) })
+                );
+                headwear.position.y = 3.3;
+                accessoryGroup.add(headwear);
+                break;
+                
+            case 'neck':
+                const necklace = new THREE.Mesh(
+                    new THREE.TorusGeometry(0.5, 0.05, 8, 16),
+                    new THREE.MeshLambertMaterial({ color: this.getCosmeticColor(cosmetic.rarity) })
+                );
+                necklace.position.y = 2.8;
+                necklace.rotation.x = Math.PI / 2;
+                accessoryGroup.add(necklace);
+                break;
+                
+            case 'wrist':
+                const watch = new THREE.Mesh(
+                    new THREE.BoxGeometry(0.8, 0.1, 0.8),
+                    new THREE.MeshLambertMaterial({ color: this.getCosmeticColor(cosmetic.rarity) })
+                );
+                watch.position.set(0.8, 1.2, 0);
+                accessoryGroup.add(watch);
+                break;
+                
+            case 'body':
+                const tattoo = new THREE.Mesh(
+                    new THREE.PlaneGeometry(1.5, 2),
+                    new THREE.MeshBasicMaterial({ 
+                        color: this.getCosmeticColor(cosmetic.rarity),
+                        transparent: true,
+                        opacity: 0.7
+                    })
+                );
+                tattoo.position.z = 0.51;
+                accessoryGroup.add(tattoo);
+                break;
+                
+            case 'back':
+                const wings = this.createWings(cosmetic.rarity);
+                accessoryGroup.add(wings);
+                break;
+        }
+        
+        return accessoryGroup.children.length > 0 ? accessoryGroup : null;
+    }
+    
+    createWings(rarity) {
+        const wingsGroup = new THREE.Group();
+        const wingGeometry = new THREE.ConeGeometry(1, 2, 8);
+        const wingMaterial = new THREE.MeshLambertMaterial({ 
+            color: this.getCosmeticColor(rarity),
+            transparent: true,
+            opacity: 0.8
+        });
+        
+        // Left wing
+        const leftWing = new THREE.Mesh(wingGeometry, wingMaterial);
+        leftWing.position.set(-1.5, 2.5, 0);
+        leftWing.rotation.z = -Math.PI / 6;
+        wingsGroup.add(leftWing);
+        
+        // Right wing
+        const rightWing = new THREE.Mesh(wingGeometry, wingMaterial);
+        rightWing.position.set(1.5, 2.5, 0);
+        rightWing.rotation.z = Math.PI / 6;
+        wingsGroup.add(rightWing);
+        
+        return wingsGroup;
+    }
+    
+    getCosmeticColor(rarity) {
+        const colors = {
+            common: 0x888888,
+            rare: 0x4CAF50,
+            epic: 0x9C27B0,
+            legendary: 0xFF9800,
+            mythic: 0xF44336
+        };
+        return colors[rarity] || 0xffffff;
+    }
+    
+    unlockVehicle(vehicle) {
+        // Store unlocked vehicles
+        if (!this.unlockedVehicles) {
+            this.unlockedVehicles = new Set();
+        }
+        this.unlockedVehicles.add(vehicle.name);
+        
+        console.log(`🚗 Unlocked vehicle: ${vehicle.name}`);
+    }
+    
+    // Battle pass integration
+    addBattlePassXP(amount) {
+        if (this.battlePass) {
+            const multiplier = this.doubleXP ? 2 : 1;
+            this.battlePass.addExperience(amount * multiplier, 'kill');
+        }
+    }
+    
     updateMinimap() {
         const canvas = document.getElementById('minimapCanvas');
         const ctx = canvas.getContext('2d');
@@ -1844,6 +2143,11 @@ class GTA6Game {
     }
     
     animate() {
+        if (this.paused) {
+            requestAnimationFrame(() => this.animate());
+            return;
+        }
+        
         requestAnimationFrame(() => this.animate());
         
         const deltaTime = this.clock.getDelta();

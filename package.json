@@ -1,13 +1,14 @@
 {
   "name": "megacity6",
   "version": "1.0.0",
-  "description": "GTA 6 - Three.js Edition with Auto-Update",
+  "description": "MegaCity6 - Complete Multiplayer GTA Game with Battle Pass",
   "main": "main.js",
   "scripts": {
-    "start": "electron .",
+    "start": "node server.js",
+    "dev": "node server.js",
     "build": "electron-builder",
     "dist": "electron-builder --publish=always",
-    "dev": "electron . --dev"
+    "electron": "electron ."
   },
   "keywords": [
     "gta",
@@ -15,14 +16,18 @@
     "threejs",
     "3d",
     "electron",
-    "auto-update"
+    "auto-update",
+    "multiplayer",
+    "websocket",
+    "server"
   ],
   "author": "LilToreyFTW",
   "license": "MIT",
   "devDependencies": {
     "electron": "^27.3.11",
     "electron-builder": "^24.13.3",
-    "electron-updater": "^6.8.3"
+    "electron-updater": "^6.8.3",
+    "ws": "^8.19.0"
   },
   "build": {
     "appId": "com.liltoreyftw.megacity6",
