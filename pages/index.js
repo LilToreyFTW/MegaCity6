@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import Head from 'next/head'
+import Script from 'next/script'
 
 export default function Home() {
   useEffect(() => {
@@ -13,12 +14,45 @@ export default function Home() {
       '/updater.js'
     ]
 
-    scripts.forEach(script => {
-      const scriptElement = document.createElement('script')
-      scriptElement.src = script
-      scriptElement.async = true
-      document.body.appendChild(scriptElement)
-    })
+    const loadScript = (src) => {
+      return new Promise((resolve, reject) => {
+        const scriptElement = document.createElement('script')
+        scriptElement.src = src
+        scriptElement.async = true
+        scriptElement.onload = resolve
+        scriptElement.onerror = reject
+        document.body.appendChild(scriptElement)
+      })
+    }
+
+    const loadAllScripts = async () => {
+      try {
+        for (const script of scripts) {
+          await loadScript(script)
+        }
+        
+        // Initialize game after all scripts are loaded
+        if (typeof GTA6Game !== 'undefined') {
+          window.game = new GTA6Game()
+          window.game.init()
+          
+          // Hide loading screen
+          const loadingScreen = document.getElementById('loading-screen')
+          if (loadingScreen) {
+            loadingScreen.style.display = 'none'
+          }
+        }
+      } catch (error) {
+        console.error('Error loading game scripts:', error)
+        // Hide loading screen even if there's an error
+        const loadingScreen = document.getElementById('loading-screen')
+        if (loadingScreen) {
+          loadingScreen.innerHTML = '<h1>Error loading game</h1><p>Please refresh the page</p>'
+        }
+      }
+    }
+
+    loadAllScripts()
 
     return () => {
       // Cleanup scripts if needed
@@ -39,6 +73,8 @@ export default function Home() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
+      
+      <Script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" strategy="beforeInteractive" />
       
       <div id="game-container">
         <div id="loading-screen">
