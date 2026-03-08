@@ -93,7 +93,7 @@ export default function Home() {
       }
     }
 
-    // Start the game
+    // Start game
     const startGame = async () => {
       try {
         console.log('Starting MegaCity6...')
@@ -108,37 +108,81 @@ export default function Home() {
           loadingScreen.innerHTML = '<h1>Starting Game...</h1><div className="loading-spinner"></div>'
         }
         
-        // Wait a moment for Three.js to be ready
+        // Wait for Three.js to be available
+        let attempts = 0
+        while (typeof THREE === 'undefined' && attempts < 50) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          attempts++
+        }
+        
+        if (typeof THREE === 'undefined') {
+          throw new Error('Three.js failed to load')
+        }
+        
+        // Wait for game scripts to load
         await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Check if GTA6Game class is available
+        if (typeof GTA6Game === 'undefined') {
+          throw new Error('Game scripts failed to load')
+        }
+        
+        console.log('Creating game instance...')
         
         // Create game instance (init is called automatically in constructor)
         window.game = new GTA6Game()
+        
+        // Wait for game to initialize
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Verify game instance was created properly
+        if (!window.game) {
+          throw new Error('Failed to create game instance')
+        }
         
         // Load player data into game
         const currentPlayer = gameDatabase.getCurrentPlayer()
         if (currentPlayer) {
           console.log('Loading player data:', currentPlayer)
           
-          // Update game with player data
-          window.game.money = currentPlayer.money || 1000
-          window.game.bankMoney = currentPlayer.bank_money || 5000
-          window.game.characterHealth = currentPlayer.health || 100
-          window.game.characterArmor = currentPlayer.armor || 0
-          window.game.wantedLevel = currentPlayer.wanted_level || 0
-          window.game.currentWeapon = currentPlayer.current_weapon || 'pistol'
-          window.game.experience = currentPlayer.experience || 0
-          
-          // Load player position if available
-          if (currentPlayer.position_x !== undefined && window.game.vehicle) {
-            window.game.vehicle.position.set(
-              currentPlayer.position_x,
-              currentPlayer.position_y,
-              currentPlayer.position_z
-            )
+          // Update game with player data (with safety checks)
+          if (window.game.money !== undefined) {
+            window.game.money = currentPlayer.money || 1000
+          }
+          if (window.game.bankMoney !== undefined) {
+            window.game.bankMoney = currentPlayer.bank_money || 5000
+          }
+          if (window.game.characterHealth !== undefined) {
+            window.game.characterHealth = currentPlayer.health || 100
+          }
+          if (window.game.characterArmor !== undefined) {
+            window.game.characterArmor = currentPlayer.armor || 0
+          }
+          if (window.game.wantedLevel !== undefined) {
+            window.game.wantedLevel = currentPlayer.wanted_level || 0
+          }
+          if (window.game.currentWeapon !== undefined) {
+            window.game.currentWeapon = currentPlayer.current_weapon || 'pistol'
+          }
+          if (window.game.experience !== undefined) {
+            window.game.experience = currentPlayer.experience || 0
           }
           
-          // Load weapons
-          if (currentPlayer.weapons) {
+          // Load player position if available (with safety check)
+          if (currentPlayer.position_x !== undefined && window.game.vehicle && window.game.vehicle.position) {
+            try {
+              window.game.vehicle.position.set(
+                currentPlayer.position_x,
+                currentPlayer.position_y,
+                currentPlayer.position_z
+              )
+            } catch (posError) {
+              console.warn('Failed to set player position:', posError)
+            }
+          }
+          
+          // Load weapons (with safety checks)
+          if (currentPlayer.weapons && window.game.weapons) {
             Object.keys(currentPlayer.weapons).forEach(weaponType => {
               const weaponData = currentPlayer.weapons[weaponType]
               if (window.game.weapons[weaponType]) {
@@ -150,7 +194,7 @@ export default function Home() {
         }
         
         // Start database auto-save if available
-        if (gameDatabase.isPlayerOnline()) {
+        if (gameDatabase && gameDatabase.isPlayerOnline && gameDatabase.isPlayerOnline()) {
           gameDatabase.startAutoSave()
         }
         
@@ -161,13 +205,12 @@ export default function Home() {
         
         console.log('Game started successfully')
         
-        // Update UI with player stats
+        // Update UI with player stats (with safety checks)
         if (currentPlayer) {
           const healthEl = document.getElementById('health')
           const armorEl = document.getElementById('armor')
           const moneyEl = document.getElementById('money')
           const wantedEl = document.getElementById('wanted')
-          
           if (healthEl) healthEl.textContent = currentPlayer.health || 100
           if (armorEl) armorEl.textContent = currentPlayer.armor || 0
           if (moneyEl) moneyEl.textContent = currentPlayer.money || 1000
@@ -178,59 +221,103 @@ export default function Home() {
         console.error('Error starting game:', error)
         const loadingScreen = document.getElementById('loading-screen')
         if (loadingScreen) {
-          loadingScreen.innerHTML = '<h1>Error starting game</h1><p>' + error.message + '</p><button onclick="location.reload()">Refresh</button>'
+          loadingScreen.innerHTML = `
+            <h1>Error starting game</h1>
+            <p>${error.message}</p>
+            <div style="margin-top: 20px;">
+              <button onclick="location.reload()" style="padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh Page</button>
+              <button onclick="window.startGame()" style="padding: 10px 20px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Try Again</button>
+            </div>
+          `
           loadingScreen.style.display = 'flex'
         }
       }
     }
 
+    // Make startGame globally available
+    window.startGame = startGame
+    
     // Initialize game when Three.js is loaded
     const initializeGame = async () => {
       try {
-        if (typeof THREE !== 'undefined' && typeof GTA6Game !== 'undefined' && typeof gameDatabase !== 'undefined') {
-          console.log('Initializing MegaCity6 with database...')
-          
-          // Setup database first
-          try {
-            await gameDatabase.setupDatabase()
-            console.log('Database setup completed')
-          } catch (error) {
-            console.warn('Database setup failed, continuing without database:', error.message)
+        // Wait for all dependencies to load
+        let attempts = 0
+        while (attempts < 100) {
+          if (typeof THREE !== 'undefined' && 
+              typeof GTA6Game !== 'undefined' && 
+              typeof gameDatabase !== 'undefined') {
+            break
           }
-          
-          // Hide loading screen and show auth modal
-          const loadingScreen = document.getElementById('loading-screen')
-          const authModal = document.getElementById('auth-modal')
-          
-          if (loadingScreen) loadingScreen.style.display = 'none'
-          if (authModal) authModal.style.display = 'flex'
-          
-          // Setup authentication UI
-          setupAuthUI()
-          
-          console.log('Game initialization completed')
-        } else {
-          console.log('Waiting for dependencies to load...')
-          setTimeout(initializeGame, 100)
+          await new Promise(resolve => setTimeout(resolve, 100))
+          attempts++
         }
+        
+        if (typeof THREE === 'undefined') {
+          console.error('Three.js failed to load')
+          return
+        }
+        
+        if (typeof GTA6Game === 'undefined') {
+          console.error('Game scripts failed to load')
+          return
+        }
+        
+        if (typeof gameDatabase === 'undefined') {
+          console.error('Database manager failed to load')
+          return
+        }
+        
+        console.log('All dependencies loaded, setting up authentication...')
+        
+        // Setup authentication UI
+        setupAuthUI()
+        
+        // Check if user is already logged in (from localStorage)
+        const savedUsername = localStorage.getItem('megaCity6_username')
+        if (savedUsername) {
+          console.log('Found saved user:', savedUsername)
+          // Auto-login if username is saved
+          try {
+            const result = await gameDatabase.loginPlayer(savedUsername)
+            if (result.success) {
+              startGame()
+              return
+            }
+          } catch (error) {
+            console.warn('Auto-login failed:', error)
+          }
+        }
+        
+        // Show authentication modal if not auto-logged in
+        const authModal = document.getElementById('auth-modal')
+        const loadingScreen = document.getElementById('loading-screen')
+        
+        if (loadingScreen) {
+          loadingScreen.style.display = 'none'
+        }
+        
+        if (authModal) {
+          authModal.style.display = 'flex'
+        }
+        
       } catch (error) {
-        console.error('Error initializing game:', error)
+        console.error('Game initialization error:', error)
         const loadingScreen = document.getElementById('loading-screen')
         if (loadingScreen) {
-          loadingScreen.innerHTML = '<h1>Error loading game</h1><p>' + error.message + '</p><button onclick="location.reload()">Refresh</button>'
+          loadingScreen.innerHTML = `
+            <h1>Initialization Error</h1>
+            <p>${error.message}</p>
+            <button onclick="location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Reload Page</button>
+          `
+          loadingScreen.style.display = 'flex'
         }
       }
     }
 
-    // Start initialization after a short delay
-    setTimeout(initializeGame, 1000)
-
-    return () => {
-      // Cleanup if needed
-      if (window.gameDatabase) {
-        window.gameDatabase.stopAutoSave()
-      }
-    }
+    // Start initialization after component mounts
+    setTimeout(() => {
+      initializeGame()
+    }, 100)
   }, [])
 
   return (
