@@ -194,23 +194,30 @@ class BattlePassSystem {
         
         battlePassContainer.appendChild(content);
         
-        document.body.appendChild(battlePassContainer);
+        if (typeof document !== 'undefined' && document.body) {
+            document.body.appendChild(battlePassContainer);
+        }
         this.battlePassUI = battlePassContainer;
         
         // Render initial content
         this.renderBattlePassContent();
         
         // Close button event
-        document.getElementById('close-battlepass').addEventListener('click', () => {
-            this.closeBattlePass();
-        });
+        const closeBtn = document.getElementById('close-battlepass');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.closeBattlePass();
+            });
+        }
     }
     
     renderBattlePassContent() {
         const content = document.getElementById('battlepass-content');
         if (!content) return;
         
-        content.innerHTML = '';
+        if (content) {
+            content.innerHTML = '';
+        }
         
         // Create page navigation
         const nav = document.createElement('div');
@@ -399,18 +406,22 @@ class BattlePassSystem {
             text-align: center;
         `;
         xpDiv.textContent = `Requires ${tierData.requiredXP} XP`;
-        tierDiv.appendChild(xpDiv);
+        if (tierDiv) {
+            tierDiv.appendChild(xpDiv);
+        }
         
         return tierDiv;
     }
     
     setupEventListeners() {
         // Battle pass toggle key (B key)
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyB') {
-                this.toggleBattlePass();
-            }
-        });
+        if (typeof document !== 'undefined') {
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyB') {
+                    this.toggleBattlePass();
+                }
+            });
+        }
     }
     
     toggleBattlePass() {

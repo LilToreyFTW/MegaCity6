@@ -4,6 +4,32 @@ import Script from 'next/script'
 
 export default function Home() {
   useEffect(() => {
+    // Global safety wrapper to prevent null reference errors
+    window.safeSetText = (elementId, text) => {
+      try {
+        const element = document.getElementById(elementId)
+        if (element) {
+          element.textContent = text
+          return true
+        } else {
+          console.warn(`Element not found for safeSetText: ${elementId}`)
+          return false
+        }
+      } catch (error) {
+        console.error(`Error setting text for ${elementId}:`, error)
+        return false
+      }
+    }
+
+    // Global safety wrapper for getting elements
+    window.safeGetElement = (elementId) => {
+      const element = document.getElementById(elementId)
+      if (!element) {
+        console.warn(`Element not found: ${elementId}`)
+      }
+      return element
+    }
+
     // Setup authentication UI
     const setupAuthUI = () => {
       const loginTab = document.getElementById('login-tab')
@@ -52,9 +78,9 @@ export default function Home() {
             const username = usernameEl.value.trim()
             if (!username) {
               if (authError) {
-                authError.textContent = 'Please enter a username'
-                authError.style.display = 'block'
-              }
+              authError.textContent = 'Please enter a username'
+              authError.style.display = 'block'
+            }
               return
             }
 
@@ -131,10 +157,24 @@ export default function Home() {
     const startGame = async () => {
       try {
         console.log('Starting MegaCity6...')
+        console.log('Available elements:', {
+          loadingScreen: !!document.getElementById('loading-screen'),
+          authModal: !!document.getElementById('auth-modal'),
+          gameCanvas: !!document.getElementById('gameCanvas'),
+          health: !!document.getElementById('health'),
+          armor: !!document.getElementById('armor'),
+          money: !!document.getElementById('money'),
+          wanted: !!document.getElementById('wanted')
+        })
         
         // Show loading screen while game initializes
         const loadingScreen = document.getElementById('loading-screen')
         const authModal = document.getElementById('auth-modal')
+        
+        console.log('Elements found:', {
+          loadingScreen: !!loadingScreen,
+          authModal: !!authModal
+        })
         
         if (authModal) authModal.style.display = 'none'
         if (loadingScreen) {
@@ -176,6 +216,8 @@ export default function Home() {
         
         // Load player data into game
         const currentPlayer = gameDatabase.getCurrentPlayer()
+        console.log('Current player:', currentPlayer)
+        
         if (currentPlayer) {
           console.log('Loading player data:', currentPlayer)
           
@@ -242,15 +284,49 @@ export default function Home() {
         // Update UI with player stats (with safety checks)
         if (currentPlayer) {
           try {
-            const healthEl = document.getElementById('health')
-            const armorEl = document.getElementById('armor')
-            const moneyEl = document.getElementById('money')
-            const wantedEl = document.getElementById('wanted')
+            console.log('Updating UI elements...')
             
-            if (healthEl) healthEl.textContent = currentPlayer.health || 100
-            if (armorEl) armorEl.textContent = currentPlayer.armor || 0
-            if (moneyEl) moneyEl.textContent = currentPlayer.money || 1000
-            if (wantedEl) wantedEl.textContent = currentPlayer.wanted_level || 0
+            // Wait for UI elements to be available
+            const waitForUIElements = () => {
+              return new Promise((resolve) => {
+                const checkElements = () => {
+                  const healthEl = document.getElementById('health')
+                  const armorEl = document.getElementById('armor')
+                  const moneyEl = document.getElementById('money')
+                  const wantedEl = document.getElementById('wanted')
+                  
+                  if (healthEl && armorEl && moneyEl && wantedEl) {
+                    console.log('All UI elements found!')
+                    resolve({ healthEl, armorEl, moneyEl, wantedEl })
+                  } else {
+                    console.log('Waiting for UI elements...', {
+                      healthEl: !!healthEl,
+                      armorEl: !!armorEl,
+                      moneyEl: !!moneyEl,
+                      wantedEl: !!wantedEl
+                    })
+                    setTimeout(checkElements, 100)
+                  }
+                }
+                checkElements()
+              })
+            }
+            
+            const { healthEl, armorEl, moneyEl, wantedEl } = await waitForUIElements()
+            
+            // Now safely update the elements using the safe wrapper
+            window.safeSetText('health', currentPlayer.health || 100)
+            console.log('Updated health element')
+            
+            window.safeSetText('armor', currentPlayer.armor || 0)
+            console.log('Updated armor element')
+            
+            window.safeSetText('money', currentPlayer.money || 1000)
+            console.log('Updated money element')
+            
+            window.safeSetText('wanted', currentPlayer.wanted_level || 0)
+            console.log('Updated wanted element')
+            
           } catch (uiError) {
             console.warn('Failed to update UI elements:', uiError)
           }
@@ -378,7 +454,6 @@ export default function Home() {
       <Script src="/updater.js" strategy="afterInteractive" />
       <Script src="/test/quick-stress-test.js" strategy="afterInteractive" />
       <Script src="/test/stress-test.js" strategy="afterInteractive" />
-      <Script src="/test/auto-fix-stress-test.js" strategy="afterInteractive" />
       
       <div id="game-container">
         <canvas id="gameCanvas" style={{ display: 'block', width: '100%', height: '100%' }}></canvas>

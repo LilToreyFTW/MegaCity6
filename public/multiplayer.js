@@ -68,7 +68,10 @@ class MultiplayerClient {
             font-size: 14px;
         `;
         playerList.innerHTML = '<h3 style="margin: 0 0 10px 0;">Players (0/999)</h3>';
-        document.getElementById('hud').appendChild(playerList);
+        const hud = document.getElementById('hud');
+        if (hud) {
+            hud.appendChild(playerList);
+        }
         
         // Chat system
         const chatContainer = document.createElement('div');
@@ -131,28 +134,37 @@ class MultiplayerClient {
             font-weight: bold;
         `;
         connectionStatus.textContent = 'Connecting...';
-        document.getElementById('hud').appendChild(connectionStatus);
+        const hudElement = document.getElementById('hud');
+        if (hudElement) {
+            hudElement.appendChild(connectionStatus);
+        }
         
         // Chat input handling
-        chatInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && chatInput.value.trim()) {
-                this.sendChat(chatInput.value.trim());
-                chatInput.value = '';
-                chatInput.style.display = 'none';
-            }
-        });
+        if (chatInput) {
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && chatInput.value.trim()) {
+                        this.sendChat(chatInput.value.trim());
+                        chatInput.value = '';
+                        if (chatInput) {
+                            chatInput.style.display = 'none';
+                        }
+                }
+            });
+        }
         
         // Chat toggle with T key
-        document.addEventListener('keydown', (e) => {
-            if (e.code === 'KeyT' && !chatInput.style.display || chatInput.style.display === 'none') {
-                e.preventDefault();
-                chatInput.style.display = 'block';
-                chatInput.focus();
-            } else if (e.code === 'Escape') {
-                chatInput.style.display = 'none';
-                chatInput.blur();
-            }
-        });
+        if (typeof document !== 'undefined') {
+            document.addEventListener('keydown', (e) => {
+                if (e.code === 'KeyT' && chatInput && (!chatInput.style.display || chatInput.style.display === 'none')) {
+                        e.preventDefault();
+                        chatInput.style.display = 'block';
+                        chatInput.focus();
+                } else if (e.code === 'Escape' && chatInput) {
+                        chatInput.style.display = 'none';
+                        chatInput.blur();
+                }
+            });
+        }
     }
     
     connect() {
@@ -808,8 +820,10 @@ class MultiplayerClient {
         
         messageDiv.innerHTML = `<span style="color: #888; font-size: 10px;">[${timestamp}]</span> <span style="color: ${senderColor}; font-weight: bold;">${sender}:</span> ${message}`;
         
-        chatMessages.appendChild(messageDiv);
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (chatMessages) {
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
         
         // Limit message history
         while (chatMessages.children.length > 50) {
@@ -864,10 +878,15 @@ class MultiplayerClient {
         `;
         notification.textContent = `-${damage}`;
         
-        document.body.appendChild(notification);
+        if (typeof document !== 'undefined' && document.body) {
+            document.body.appendChild(notification);
+        }
         
+        // Remove notification after animation
         setTimeout(() => {
-            document.body.removeChild(notification);
+            if (notification && notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
         }, 1000);
     }
 }

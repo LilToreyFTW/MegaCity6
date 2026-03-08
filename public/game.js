@@ -106,11 +106,17 @@ class GTA6Game {
         this.animate();
         
         setTimeout(() => {
-            document.getElementById('loading').textContent = 'Loading MegaCity6...';
+            const loadingEl = document.getElementById('loading')
+            if (loadingEl) {
+                loadingEl.textContent = 'Loading MegaCity6...'
+            }
         }, 1000);
         
         setTimeout(() => {
-            document.getElementById('loading').style.display = 'none';
+            const loadingEl = document.getElementById('loading')
+            if (loadingEl) {
+                loadingEl.style.display = 'none'
+            }
         }, 2000);
     }
     
@@ -832,9 +838,11 @@ class GTA6Game {
     updateHealthDisplay() {
         // Update health display if needed
         const healthDisplay = document.getElementById('health') || this.createHealthDisplay();
-        healthDisplay.textContent = `Health: ${this.characterHealth}`;
-        healthDisplay.style.color = this.characterHealth > 50 ? '#00ff00' : 
-                                   this.characterHealth > 25 ? '#ffff00' : '#ff0000';
+        if (healthDisplay) {
+            healthDisplay.textContent = `Health: ${this.characterHealth}`;
+            healthDisplay.style.color = this.characterHealth > 50 ? '#00ff00' : 
+                                       this.characterHealth > 25 ? '#ffff00' : '#ff0000';
+        }
     }
     
     createHealthDisplay() {
@@ -1143,7 +1151,9 @@ class GTA6Game {
     updateMoneyDisplay() {
         // Update HUD with money display
         const moneyDisplay = document.getElementById('money') || this.createMoneyDisplay();
-        moneyDisplay.textContent = `$${this.money} | Bank: $${this.bankMoney}`;
+        if (moneyDisplay) {
+            moneyDisplay.textContent = `$${this.money} | Bank: $${this.bankMoney}`;
+        }
     }
     
     createMoneyDisplay() {
@@ -1343,13 +1353,15 @@ class GTA6Game {
     
     updateWantedDisplay() {
         const wantedDisplay = document.getElementById('wanted') || this.createWantedDisplay();
-        wantedDisplay.innerHTML = '';
-        
-        for (let i = 0; i < this.wantedLevel; i++) {
-            const star = document.createElement('span');
-            star.textContent = '⭐';
-            star.style.marginRight = '5px';
-            wantedDisplay.appendChild(star);
+        if (wantedDisplay) {
+            wantedDisplay.innerHTML = '';
+            
+            for (let i = 0; i < this.wantedLevel; i++) {
+                const star = document.createElement('span');
+                star.textContent = '⭐';
+                star.style.marginRight = '5px';
+                wantedDisplay.appendChild(star);
+            }
         }
     }
     
@@ -1720,7 +1732,10 @@ class GTA6Game {
         
         // Update speedometer
         const mph = Math.abs(this.speed * 2).toFixed(0);
-        document.getElementById('speedometer').textContent = `${mph} mph`;
+        const speedometerEl = document.getElementById('speedometer')
+        if (speedometerEl) {
+            speedometerEl.textContent = `${mph} mph`;
+        }
         
         // Update camera to follow vehicle
         this.updateCamera();
@@ -2161,7 +2176,10 @@ class GTA6Game {
         this.updateMinimap();
         
         // Update mission display
-        document.getElementById('mission').textContent = this.mission;
+        const missionEl = document.getElementById('mission')
+        if (missionEl) {
+            missionEl.textContent = this.mission;
+        }
         
         this.renderer.render(this.scene, this.camera);
     }
