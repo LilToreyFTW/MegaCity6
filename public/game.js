@@ -1,5 +1,8 @@
 class GTA6Game {
     constructor() {
+        console.log('Initializing GTA6Game...')
+        
+        // Game properties
         this.scene = null;
         this.camera = null;
         this.renderer = null;
@@ -121,24 +124,32 @@ class GTA6Game {
     }
     
     setupScene() {
-        this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.Fog(0x87CEEB, 100, 1000);
-        
-        this.camera = new THREE.PerspectiveCamera(
-            75,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            2000
-        );
-        
-        this.renderer = new THREE.WebGLRenderer({ 
-            canvas: document.getElementById('gameCanvas'),
-            antialias: true 
-        });
-        this.renderer.setSize(window.innerWidth, window.innerHeight);
-        this.renderer.shadowMap.enabled = true;
-        this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        this.renderer.setClearColor(0x87CEEB);
+        try {
+            console.log('Setting up scene...')
+            this.scene = new THREE.Scene();
+            this.scene.fog = new THREE.Fog(0x87CEEB, 100, 1000);
+            
+            this.camera = new THREE.PerspectiveCamera(
+                75,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                2000
+            );
+            
+            this.renderer = new THREE.WebGLRenderer({ 
+                canvas: document.getElementById('gameCanvas'),
+                antialias: true 
+            });
+            this.renderer.setSize(window.innerWidth, window.innerHeight);
+            this.renderer.shadowMap.enabled = true;
+            this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            this.renderer.setClearColor(0x87CEEB);
+            
+            console.log('Scene setup complete')
+        } catch (error) {
+            console.error('Scene setup failed:', error);
+            throw error;
+        }
     }
     
     setupLighting() {
