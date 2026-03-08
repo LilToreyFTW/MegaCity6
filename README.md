@@ -1,4 +1,4 @@
-# GTA 6 - Three.js Edition 🎮
+# MegaCity 6 - Three.js Edition 🎮
 
 A fully-featured GTA 6-inspired game built with Three.js, featuring open-world gameplay, combat systems, and police chases.
 
