@@ -106,14 +106,14 @@ class GTA6Game {
         this.animate();
         
         setTimeout(() => {
-            const loadingEl = document.getElementById('loading')
+            const loadingEl = document.getElementById('loading-screen')
             if (loadingEl) {
                 loadingEl.textContent = 'Loading MegaCity6...'
             }
         }, 1000);
         
         setTimeout(() => {
-            const loadingEl = document.getElementById('loading')
+            const loadingEl = document.getElementById('loading-screen')
             if (loadingEl) {
                 loadingEl.style.display = 'none'
             }
