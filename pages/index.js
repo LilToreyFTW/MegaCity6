@@ -4,64 +4,153 @@ import Script from 'next/script'
 
 export default function Home() {
   useEffect(() => {
-    // Load game scripts dynamically
-    const scripts = [
-      '/game.js',
-      '/multiplayer.js',
-      '/battlepass.js',
-      '/gangs.js',
-      '/characterAnimations.js',
-      '/updater.js'
-    ]
+    // Setup authentication UI
+    const setupAuthUI = () => {
+      const loginTab = document.getElementById('login-tab')
+      const registerTab = document.getElementById('register-tab')
+      const loginForm = document.getElementById('login-form')
+      const registerForm = document.getElementById('register-form')
+      const loginBtn = document.getElementById('login-btn')
+      const registerBtn = document.getElementById('register-btn')
+      const authError = document.getElementById('auth-error')
 
-    const loadScript = (src) => {
-      return new Promise((resolve, reject) => {
-        const scriptElement = document.createElement('script')
-        scriptElement.src = src
-        scriptElement.async = true
-        scriptElement.onload = resolve
-        scriptElement.onerror = reject
-        document.body.appendChild(scriptElement)
-      })
+      if (loginTab && registerTab) {
+        loginTab.addEventListener('click', () => {
+          loginTab.classList.add('active')
+          registerTab.classList.remove('active')
+          loginForm.style.display = 'flex'
+          registerForm.style.display = 'none'
+          authError.style.display = 'none'
+        })
+
+        registerTab.addEventListener('click', () => {
+          registerTab.classList.add('active')
+          loginTab.classList.remove('active')
+          registerForm.style.display = 'flex'
+          loginForm.style.display = 'none'
+          authError.style.display = 'none'
+        })
+      }
+
+      if (loginBtn) {
+        loginBtn.addEventListener('click', async () => {
+          const username = document.getElementById('username').value.trim()
+          if (!username) {
+            authError.textContent = 'Please enter a username'
+            authError.style.display = 'block'
+            return
+          }
+
+          try {
+            authError.style.display = 'none'
+            const result = await gameDatabase.loginPlayer(username)
+            if (result.success) {
+              document.getElementById('auth-modal').style.display = 'none'
+              startGame()
+            }
+          } catch (error) {
+            authError.textContent = error.message
+            authError.style.display = 'block'
+          }
+        })
+      }
+
+      if (registerBtn) {
+        registerBtn.addEventListener('click', async () => {
+          const username = document.getElementById('reg-username').value.trim()
+          const email = document.getElementById('reg-email').value.trim()
+          
+          if (!username) {
+            authError.textContent = 'Please choose a username'
+            authError.style.display = 'block'
+            return
+          }
+
+          try {
+            authError.style.display = 'none'
+            const result = await gameDatabase.registerPlayer(username, email || null)
+            if (result.success) {
+              document.getElementById('auth-modal').style.display = 'none'
+              startGame()
+            }
+          } catch (error) {
+            authError.textContent = error.message
+            authError.style.display = 'block'
+          }
+        })
+      }
     }
 
-    const loadAllScripts = async () => {
+    // Start the game
+    const startGame = async () => {
       try {
-        for (const script of scripts) {
-          await loadScript(script)
+        console.log('Starting MegaCity6...')
+        
+        // Create game instance
+        window.game = new GTA6Game()
+        
+        // Start database auto-save if available
+        if (gameDatabase.isPlayerOnline()) {
+          gameDatabase.startAutoSave()
         }
         
-        // Initialize game after all scripts are loaded
-        if (typeof GTA6Game !== 'undefined') {
-          window.game = new GTA6Game()
-          window.game.init()
-          
-          // Hide loading screen
-          const loadingScreen = document.getElementById('loading-screen')
-          if (loadingScreen) {
-            loadingScreen.style.display = 'none'
-          }
-        }
+        console.log('Game started successfully')
       } catch (error) {
-        console.error('Error loading game scripts:', error)
-        // Hide loading screen even if there's an error
+        console.error('Error starting game:', error)
         const loadingScreen = document.getElementById('loading-screen')
         if (loadingScreen) {
-          loadingScreen.innerHTML = '<h1>Error loading game</h1><p>Please refresh the page</p>'
+          loadingScreen.innerHTML = '<h1>Error starting game</h1><p>' + error.message + '</p><button onclick="location.reload()">Refresh</button>'
+          loadingScreen.style.display = 'flex'
         }
       }
     }
 
-    loadAllScripts()
+    // Initialize game when Three.js is loaded
+    const initializeGame = async () => {
+      try {
+        if (typeof THREE !== 'undefined' && typeof GTA6Game !== 'undefined' && typeof gameDatabase !== 'undefined') {
+          console.log('Initializing MegaCity6 with database...')
+          
+          // Setup database first
+          try {
+            await gameDatabase.setupDatabase()
+            console.log('Database setup completed')
+          } catch (error) {
+            console.warn('Database setup failed, continuing without database:', error.message)
+          }
+          
+          // Hide loading screen and show auth modal
+          const loadingScreen = document.getElementById('loading-screen')
+          const authModal = document.getElementById('auth-modal')
+          
+          if (loadingScreen) loadingScreen.style.display = 'none'
+          if (authModal) authModal.style.display = 'flex'
+          
+          // Setup authentication UI
+          setupAuthUI()
+          
+          console.log('Game initialization completed')
+        } else {
+          console.log('Waiting for dependencies to load...')
+          setTimeout(initializeGame, 100)
+        }
+      } catch (error) {
+        console.error('Error initializing game:', error)
+        const loadingScreen = document.getElementById('loading-screen')
+        if (loadingScreen) {
+          loadingScreen.innerHTML = '<h1>Error loading game</h1><p>' + error.message + '</p><button onclick="location.reload()">Refresh</button>'
+        }
+      }
+    }
+
+    // Start initialization after a short delay
+    setTimeout(initializeGame, 1000)
 
     return () => {
-      // Cleanup scripts if needed
-      scripts.forEach(script => {
-        const scriptElement = document.querySelector(`script[src="${script}"]`)
-        if (scriptElement) {
-          document.body.removeChild(scriptElement)
-        }
-      })
+      // Cleanup if needed
+      if (window.gameDatabase) {
+        window.gameDatabase.stopAutoSave()
+      }
     }
   }, [])
 
@@ -75,11 +164,41 @@ export default function Home() {
       </Head>
       
       <Script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js" strategy="beforeInteractive" />
+      <Script src="/database.js" strategy="afterInteractive" />
+      <Script src="/game.js" strategy="afterInteractive" />
+      <Script src="/multiplayer.js" strategy="afterInteractive" />
+      <Script src="/battlepass.js" strategy="afterInteractive" />
+      <Script src="/gangs.js" strategy="afterInteractive" />
+      <Script src="/characterAnimations.js" strategy="afterInteractive" />
+      <Script src="/updater.js" strategy="afterInteractive" />
       
       <div id="game-container">
         <div id="loading-screen">
           <h1>Loading MegaCity6...</h1>
           <div className="loading-spinner"></div>
+        </div>
+        
+        <div id="auth-modal" style={{ display: 'none' }}>
+          <div className="auth-container">
+            <h2>Welcome to MegaCity6</h2>
+            <div className="auth-tabs">
+              <button id="login-tab" className="active">Login</button>
+              <button id="register-tab">Register</button>
+            </div>
+            
+            <div id="login-form" className="auth-form">
+              <input type="text" id="username" placeholder="Enter username" />
+              <button id="login-btn">Enter Game</button>
+            </div>
+            
+            <div id="register-form" className="auth-form" style={{ display: 'none' }}>
+              <input type="text" id="reg-username" placeholder="Choose username" />
+              <input type="email" id="reg-email" placeholder="Email (optional)" />
+              <button id="register-btn">Create Account</button>
+            </div>
+            
+            <div id="auth-error" className="auth-error"></div>
+          </div>
         </div>
       </div>
 
@@ -103,7 +222,7 @@ export default function Home() {
           position: relative;
         }
         
-        #loading-screen {
+        #loading-screen, #auth-modal {
           position: fixed;
           top: 0;
           left: 0;
@@ -125,6 +244,97 @@ export default function Home() {
           border-radius: 50%;
           animation: spin 1s linear infinite;
           margin-top: 20px;
+        }
+        
+        .auth-container {
+          background: rgba(0, 0, 0, 0.8);
+          padding: 40px;
+          border-radius: 15px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+          max-width: 400px;
+          width: 90%;
+        }
+        
+        .auth-container h2 {
+          text-align: center;
+          margin-bottom: 30px;
+          color: #3498db;
+          font-size: 28px;
+        }
+        
+        .auth-tabs {
+          display: flex;
+          margin-bottom: 30px;
+        }
+        
+        .auth-tabs button {
+          flex: 1;
+          padding: 12px;
+          background: transparent;
+          color: #fff;
+          border: 1px solid #3498db;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        
+        .auth-tabs button:first-child {
+          border-radius: 5px 0 0 5px;
+        }
+        
+        .auth-tabs button:last-child {
+          border-radius: 0 5px 5px 0;
+        }
+        
+        .auth-tabs button.active {
+          background: #3498db;
+          color: #fff;
+        }
+        
+        .auth-form {
+          display: flex;
+          flex-direction: column;
+          gap: 15px;
+        }
+        
+        .auth-form input {
+          padding: 15px;
+          border: 1px solid #3498db;
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
+          font-size: 16px;
+        }
+        
+        .auth-form input::placeholder {
+          color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .auth-form button {
+          padding: 15px;
+          background: linear-gradient(45deg, #3498db, #2980b9);
+          color: #fff;
+          border: none;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: bold;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+        
+        .auth-form button:hover {
+          background: linear-gradient(45deg, #2980b9, #3498db);
+          transform: translateY(-2px);
+          box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .auth-error {
+          color: #e74c3c;
+          text-align: center;
+          margin-top: 15px;
+          padding: 10px;
+          border-radius: 5px;
+          background: rgba(231, 76, 60, 0.1);
+          display: none;
         }
         
         @keyframes spin {

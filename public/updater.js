@@ -20,30 +20,30 @@ class GameUpdater {
   
   loadLocalVersion() {
     try {
-      const fs = require('fs');
-      if (fs.existsSync(this.localVersionPath)) {
-        const versionData = JSON.parse(fs.readFileSync(this.localVersionPath, 'utf8'));
-        this.currentVersion = versionData.version;
-        console.log('Loaded local version:', this.currentVersion);
+      // Browser version - use localStorage
+      const versionData = localStorage.getItem('gameVersion');
+      if (versionData) {
+        const parsed = JSON.parse(versionData);
+        this.currentVersion = parsed.version;
       } else {
-        this.saveLocalVersion();
+        this.currentVersion = '1.0.0';
       }
     } catch (error) {
-      console.log('Could not load local version:', error);
-      this.saveLocalVersion();
+      console.error('Error loading local version:', error);
+      this.currentVersion = '1.0.0';
     }
   }
   
   saveLocalVersion() {
     try {
-      const fs = require('fs');
+      // Browser version - use localStorage
       const versionData = {
         version: this.currentVersion,
         lastUpdate: new Date().toISOString()
       };
-      fs.writeFileSync(this.localVersionPath, JSON.stringify(versionData, null, 2));
+      localStorage.setItem('gameVersion', JSON.stringify(versionData));
     } catch (error) {
-      console.log('Could not save local version:', error);
+      console.error('Error saving local version:', error);
     }
   }
   
