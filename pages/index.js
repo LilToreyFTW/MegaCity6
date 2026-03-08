@@ -15,79 +15,113 @@ export default function Home() {
       const authError = document.getElementById('auth-error')
 
       if (loginTab && registerTab) {
-        loginTab.addEventListener('click', () => {
-          loginTab.classList.add('active')
-          registerTab.classList.remove('active')
-          loginForm.style.display = 'flex'
-          registerForm.style.display = 'none'
-          authError.style.display = 'none'
-        })
+        try {
+          loginTab.addEventListener('click', () => {
+            if (loginForm && registerForm && authError) {
+              loginTab.classList.add('active')
+              registerTab.classList.remove('active')
+              loginForm.style.display = 'flex'
+              registerForm.style.display = 'none'
+              authError.style.display = 'none'
+            }
+          })
 
-        registerTab.addEventListener('click', () => {
-          registerTab.classList.add('active')
-          loginTab.classList.remove('active')
-          registerForm.style.display = 'flex'
-          loginForm.style.display = 'none'
-          authError.style.display = 'none'
-        })
+          registerTab.addEventListener('click', () => {
+            if (loginForm && registerForm && authError) {
+              registerTab.classList.add('active')
+              loginTab.classList.remove('active')
+              registerForm.style.display = 'flex'
+              loginForm.style.display = 'none'
+              authError.style.display = 'none'
+            }
+          })
+        } catch (tabError) {
+          console.warn('Tab switching error:', tabError)
+        }
       }
 
       if (loginBtn) {
         loginBtn.addEventListener('click', async () => {
-          const username = document.getElementById('username').value.trim()
-          if (!username) {
-            authError.textContent = 'Please enter a username'
-            authError.style.display = 'block'
-            return
-          }
-
-          // Show loading state
-          loginBtn.textContent = 'Logging in...'
-          loginBtn.disabled = true
-          authError.style.display = 'none'
-
           try {
+            const usernameEl = document.getElementById('username')
+            if (!usernameEl) {
+              console.error('Username input not found')
+              return
+            }
+            
+            const username = usernameEl.value.trim()
+            if (!username) {
+              if (authError) {
+                authError.textContent = 'Please enter a username'
+                authError.style.display = 'block'
+              }
+              return
+            }
+
+            // Show loading state
+            loginBtn.textContent = 'Logging in...'
+            loginBtn.disabled = true
+            if (authError) authError.style.display = 'none'
+
             const result = await gameDatabase.loginPlayer(username)
             if (result.success) {
               console.log('Login successful, starting game...')
               startGame()
             }
           } catch (error) {
-            authError.textContent = error.message
-            authError.style.display = 'block'
-            loginBtn.textContent = 'Enter Game'
-            loginBtn.disabled = false
+            if (authError) {
+              authError.textContent = error.message
+              authError.style.display = 'block'
+            }
+            if (loginBtn) {
+              loginBtn.textContent = 'Enter Game'
+              loginBtn.disabled = false
+            }
           }
         })
       }
 
       if (registerBtn) {
         registerBtn.addEventListener('click', async () => {
-          const username = document.getElementById('reg-username').value.trim()
-          const email = document.getElementById('reg-email').value.trim()
-          
-          if (!username) {
-            authError.textContent = 'Please choose a username'
-            authError.style.display = 'block'
-            return
-          }
-
-          // Show loading state
-          registerBtn.textContent = 'Creating account...'
-          registerBtn.disabled = true
-          authError.style.display = 'none'
-
           try {
+            const usernameEl = document.getElementById('reg-username')
+            const emailEl = document.getElementById('reg-email')
+            
+            if (!usernameEl || !emailEl) {
+              console.error('Registration inputs not found')
+              return
+            }
+            
+            const username = usernameEl.value.trim()
+            const email = emailEl ? emailEl.value.trim() : ''
+            
+            if (!username) {
+              if (authError) {
+                authError.textContent = 'Please choose a username'
+                authError.style.display = 'block'
+              }
+              return
+            }
+
+            // Show loading state
+            registerBtn.textContent = 'Creating account...'
+            registerBtn.disabled = true
+            if (authError) authError.style.display = 'none'
+
             const result = await gameDatabase.registerPlayer(username, email || null)
             if (result.success) {
               console.log('Registration successful, starting game...')
               startGame()
             }
           } catch (error) {
-            authError.textContent = error.message
-            authError.style.display = 'block'
-            registerBtn.textContent = 'Create Account'
-            registerBtn.disabled = false
+            if (authError) {
+              authError.textContent = error.message
+              authError.style.display = 'block'
+            }
+            if (registerBtn) {
+              registerBtn.textContent = 'Create Account'
+              registerBtn.disabled = false
+            }
           }
         })
       }
@@ -207,14 +241,19 @@ export default function Home() {
         
         // Update UI with player stats (with safety checks)
         if (currentPlayer) {
-          const healthEl = document.getElementById('health')
-          const armorEl = document.getElementById('armor')
-          const moneyEl = document.getElementById('money')
-          const wantedEl = document.getElementById('wanted')
-          if (healthEl) healthEl.textContent = currentPlayer.health || 100
-          if (armorEl) armorEl.textContent = currentPlayer.armor || 0
-          if (moneyEl) moneyEl.textContent = currentPlayer.money || 1000
-          if (wantedEl) wantedEl.textContent = currentPlayer.wanted_level || 0
+          try {
+            const healthEl = document.getElementById('health')
+            const armorEl = document.getElementById('armor')
+            const moneyEl = document.getElementById('money')
+            const wantedEl = document.getElementById('wanted')
+            
+            if (healthEl) healthEl.textContent = currentPlayer.health || 100
+            if (armorEl) armorEl.textContent = currentPlayer.armor || 0
+            if (moneyEl) moneyEl.textContent = currentPlayer.money || 1000
+            if (wantedEl) wantedEl.textContent = currentPlayer.wanted_level || 0
+          } catch (uiError) {
+            console.warn('Failed to update UI elements:', uiError)
+          }
         }
         
       } catch (error) {
