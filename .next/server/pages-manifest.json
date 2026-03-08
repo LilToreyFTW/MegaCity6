@@ -1,1 +1,7 @@
-{}
+{
+  "/_app": "pages/_app.js",
+  "/_error": "pages/_error.js",
+  "/_document": "pages/_document.js",
+  "/api/players/register": "pages/api/players/register.js",
+  "/api/database/setup": "pages/api/database/setup.js"
+}
