@@ -378,6 +378,7 @@ export default function Home() {
       <Script src="/updater.js" strategy="afterInteractive" />
       <Script src="/test/quick-stress-test.js" strategy="afterInteractive" />
       <Script src="/test/stress-test.js" strategy="afterInteractive" />
+      <Script src="/test/auto-fix-stress-test.js" strategy="afterInteractive" />
       
       <div id="game-container">
         <canvas id="gameCanvas" style={{ display: 'block', width: '100%', height: '100%' }}></canvas>
