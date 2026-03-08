@@ -41,16 +41,22 @@ export default function Home() {
             return
           }
 
+          // Show loading state
+          loginBtn.textContent = 'Logging in...'
+          loginBtn.disabled = true
+          authError.style.display = 'none'
+
           try {
-            authError.style.display = 'none'
             const result = await gameDatabase.loginPlayer(username)
             if (result.success) {
-              document.getElementById('auth-modal').style.display = 'none'
+              console.log('Login successful, starting game...')
               startGame()
             }
           } catch (error) {
             authError.textContent = error.message
             authError.style.display = 'block'
+            loginBtn.textContent = 'Enter Game'
+            loginBtn.disabled = false
           }
         })
       }
@@ -66,16 +72,22 @@ export default function Home() {
             return
           }
 
+          // Show loading state
+          registerBtn.textContent = 'Creating account...'
+          registerBtn.disabled = true
+          authError.style.display = 'none'
+
           try {
-            authError.style.display = 'none'
             const result = await gameDatabase.registerPlayer(username, email || null)
             if (result.success) {
-              document.getElementById('auth-modal').style.display = 'none'
+              console.log('Registration successful, starting game...')
               startGame()
             }
           } catch (error) {
             authError.textContent = error.message
             authError.style.display = 'block'
+            registerBtn.textContent = 'Create Account'
+            registerBtn.disabled = false
           }
         })
       }
@@ -86,15 +98,82 @@ export default function Home() {
       try {
         console.log('Starting MegaCity6...')
         
-        // Create game instance
+        // Show loading screen while game initializes
+        const loadingScreen = document.getElementById('loading-screen')
+        const authModal = document.getElementById('auth-modal')
+        
+        if (authModal) authModal.style.display = 'none'
+        if (loadingScreen) {
+          loadingScreen.style.display = 'flex'
+          loadingScreen.innerHTML = '<h1>Starting Game...</h1><div className="loading-spinner"></div>'
+        }
+        
+        // Wait a moment for Three.js to be ready
+        await new Promise(resolve => setTimeout(resolve, 500))
+        
+        // Create game instance (init is called automatically in constructor)
         window.game = new GTA6Game()
+        
+        // Load player data into game
+        const currentPlayer = gameDatabase.getCurrentPlayer()
+        if (currentPlayer) {
+          console.log('Loading player data:', currentPlayer)
+          
+          // Update game with player data
+          window.game.money = currentPlayer.money || 1000
+          window.game.bankMoney = currentPlayer.bank_money || 5000
+          window.game.characterHealth = currentPlayer.health || 100
+          window.game.characterArmor = currentPlayer.armor || 0
+          window.game.wantedLevel = currentPlayer.wanted_level || 0
+          window.game.currentWeapon = currentPlayer.current_weapon || 'pistol'
+          window.game.experience = currentPlayer.experience || 0
+          
+          // Load player position if available
+          if (currentPlayer.position_x !== undefined && window.game.vehicle) {
+            window.game.vehicle.position.set(
+              currentPlayer.position_x,
+              currentPlayer.position_y,
+              currentPlayer.position_z
+            )
+          }
+          
+          // Load weapons
+          if (currentPlayer.weapons) {
+            Object.keys(currentPlayer.weapons).forEach(weaponType => {
+              const weaponData = currentPlayer.weapons[weaponType]
+              if (window.game.weapons[weaponType]) {
+                window.game.weapons[weaponType].ammo = weaponData.ammo
+                window.game.weapons[weaponType].unlocked = weaponData.unlocked
+              }
+            })
+          }
+        }
         
         // Start database auto-save if available
         if (gameDatabase.isPlayerOnline()) {
           gameDatabase.startAutoSave()
         }
         
+        // Hide loading screen
+        if (loadingScreen) {
+          loadingScreen.style.display = 'none'
+        }
+        
         console.log('Game started successfully')
+        
+        // Update UI with player stats
+        if (currentPlayer) {
+          const healthEl = document.getElementById('health')
+          const armorEl = document.getElementById('armor')
+          const moneyEl = document.getElementById('money')
+          const wantedEl = document.getElementById('wanted')
+          
+          if (healthEl) healthEl.textContent = currentPlayer.health || 100
+          if (armorEl) armorEl.textContent = currentPlayer.armor || 0
+          if (moneyEl) moneyEl.textContent = currentPlayer.money || 1000
+          if (wantedEl) wantedEl.textContent = currentPlayer.wanted_level || 0
+        }
+        
       } catch (error) {
         console.error('Error starting game:', error)
         const loadingScreen = document.getElementById('loading-screen')
@@ -171,8 +250,12 @@ export default function Home() {
       <Script src="/gangs.js" strategy="afterInteractive" />
       <Script src="/characterAnimations.js" strategy="afterInteractive" />
       <Script src="/updater.js" strategy="afterInteractive" />
+      <Script src="/test/quick-stress-test.js" strategy="afterInteractive" />
+      <Script src="/test/stress-test.js" strategy="afterInteractive" />
       
       <div id="game-container">
+        <canvas id="gameCanvas" style={{ display: 'block', width: '100%', height: '100%' }}></canvas>
+        
         <div id="loading-screen">
           <h1>Loading MegaCity6...</h1>
           <div className="loading-spinner"></div>
@@ -198,6 +281,17 @@ export default function Home() {
             </div>
             
             <div id="auth-error" className="auth-error"></div>
+          </div>
+        </div>
+        
+        {/* Game UI Elements */}
+        <div id="game-ui" style={{ position: 'absolute', top: '10px', left: '10px', color: 'white', fontFamily: 'Arial, sans-serif' }}>
+          <div id="mission" style={{ fontSize: '16px', marginBottom: '10px' }}>Welcome to MegaCity6</div>
+          <div id="stats" style={{ fontSize: '14px' }}>
+            <div>Health: <span id="health">100</span></div>
+            <div>Armor: <span id="armor">0</span></div>
+            <div>Money: $<span id="money">1000</span></div>
+            <div>Wanted Level: <span id="wanted">0</span></div>
           </div>
         </div>
       </div>
