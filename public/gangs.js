@@ -573,20 +573,18 @@ class GangSystem {
             font-weight: bold;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
             pointer-events: none;
-            z-index: 10000;
-            animation: damagePulse 1s ease-out forwards;
-        `;
-        indicator.textContent = `-${damage}`;
-        
-        document.body.appendChild(indicator);
-        
-        setTimeout(() => {
-            if (document.body.contains(indicator)) {
-                document.body.removeChild(indicator);
-            }
-        }, 1000);
+        if (typeof document !== 'undefined' && document.body) {
+            document.body.appendChild(indicator);
+        }
     }
     
+    // Remove indicator after animation
+    setTimeout(() => {
+        if (indicator && indicator.parentNode) {
+            indicator.parentNode.removeChild(indicator);
+        }
+    }, 1000);
+}
     showGangDamage(gang, damage) {
         if (!gang.model) return;
         
