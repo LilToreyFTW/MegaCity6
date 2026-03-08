@@ -1,4 +1,4 @@
-import { sql } from '../../../../lib/neon.js'
+import { sql } from '../../../lib/neon.js'
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
