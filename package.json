@@ -2,70 +2,37 @@
   "name": "megacity6",
   "version": "1.0.0",
   "description": "MegaCity6 - Complete Multiplayer GTA Game with Battle Pass",
-  "main": "main.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "build": "electron-builder",
-    "dist": "electron-builder --publish=always",
-    "electron": "electron ."
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "export": "next build && next export",
+    "lint": "next lint"
   },
   "keywords": [
     "gta",
     "game",
     "threejs",
     "3d",
-    "electron",
-    "auto-update",
+    "nextjs",
+    "vercel",
     "multiplayer",
     "websocket",
     "server"
   ],
   "author": "LilToreyFTW",
   "license": "MIT",
-  "devDependencies": {
-    "electron": "^27.3.11",
-    "electron-builder": "^24.13.3",
-    "electron-updater": "^6.8.3",
-    "ws": "^8.19.0"
+  "dependencies": {
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
   },
-  "build": {
-    "appId": "com.liltoreyftw.megacity6",
-    "productName": "MegaCity6",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "main.js",
-      "index.html",
-      "game.js",
-      "preload.js",
-      "updater.js",
-      "node_modules/**/*"
-    ],
-    "win": {
-      "target": "nsis",
-      "icon": "icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "publish": {
-      "provider": "github",
-      "owner": "LilToreyFTW",
-      "repo": "MegaCity6"
-    }
+  "devDependencies": {
+    "eslint": "^8.0.0",
+    "eslint-config-next": "^14.0.0"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/LilToreyFTW/MegaCity6.git"
-  },
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/LilToreyFTW/MegaCity6/issues"
-  },
-  "homepage": "https://github.com/LilToreyFTW/MegaCity6#readme"
+  }
 }
