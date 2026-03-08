@@ -25,6 +25,13 @@ class DatabaseManager {
                 console.log('Player registered:', data.player)
                 return data
             } else {
+                // Check if database setup is required
+                if (data.setupRequired) {
+                    console.log('Database setup required, running setup...')
+                    await this.setupDatabase()
+                    // Retry registration after setup
+                    return this.registerPlayer(username, email)
+                }
                 throw new Error(data.error || 'Registration failed')
             }
         } catch (error) {
@@ -52,6 +59,13 @@ class DatabaseManager {
                 console.log('Player logged in:', data.player)
                 return data
             } else {
+                // Check if database setup is required
+                if (data.setupRequired) {
+                    console.log('Database setup required, running setup...')
+                    await this.setupDatabase()
+                    // Retry login after setup
+                    return this.loginPlayer(username)
+                }
                 throw new Error(data.error || 'Login failed')
             }
         } catch (error) {
