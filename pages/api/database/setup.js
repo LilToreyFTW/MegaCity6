@@ -201,11 +201,32 @@ CREATE INDEX IF NOT EXISTS idx_leaderboard_category ON leaderboard(category, sco
         purchased_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )`
 
+      await sql`CREATE TABLE IF NOT EXISTS game_sessions (
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER REFERENCES players(id),
+        session_start TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        session_end TIMESTAMP,
+        duration_minutes INTEGER,
+        money_earned INTEGER DEFAULT 0,
+        xp_gained INTEGER DEFAULT 0,
+        missions_completed INTEGER DEFAULT 0
+      )`
+
+      await sql`CREATE TABLE IF NOT EXISTS leaderboard (
+        id SERIAL PRIMARY KEY,
+        player_id INTEGER REFERENCES players(id),
+        category VARCHAR(20) NOT NULL,
+        score INTEGER NOT NULL,
+        rank_position INTEGER,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )`
+
       // Create indexes
       await sql`CREATE INDEX IF NOT EXISTS idx_players_username ON players(username)`
       await sql`CREATE INDEX IF NOT EXISTS idx_players_online ON players(is_online)`
       await sql`CREATE INDEX IF NOT EXISTS idx_game_stats_player ON game_stats(player_id)`
       await sql`CREATE INDEX IF NOT EXISTS idx_battle_pass_player ON battle_pass(player_id)`
+      await sql`CREATE INDEX IF NOT EXISTS idx_game_sessions_player ON game_sessions(player_id)`
 
     } catch (error) {
       console.error('Schema creation error:', error)

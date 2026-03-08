@@ -59,7 +59,7 @@ export default async function handler(req, res) {
     // Start game session
     await sql`
       INSERT INTO game_sessions (player_id, session_start)
-      VALUES (${player[0].id})
+      VALUES (${player[0].id}, CURRENT_TIMESTAMP)
     `
 
     const playerData = {
