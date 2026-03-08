@@ -17,7 +17,16 @@ class GTA6Game {
         this.speed = 0;
         this.maxSpeed = 50;
         this.inVehicle = true;
-        this.mission = "Welcome to Vice City";
+        // Camera system
+        this.cameraMode = 'third_person'; // third_person, first_person, cinematic, side_view, overhead
+        this.cameraModes = ['third_person', 'first_person', 'cinematic', 'side_view', 'overhead'];
+        this.currentCameraIndex = 0;
+        this.cameraTransition = 0;
+        this.cameraTransitionSpeed = 0.1;
+        
+        // Game name
+        this.gameName = 'MegaCity6';
+        this.mission = "Welcome to MegaCity6";
         this.audioContext = null;
         this.sounds = {};
         this.characterSpeed = 5;
@@ -67,6 +76,10 @@ class GTA6Game {
         this.setupCamera();
         this.createAudio();
         this.animate();
+        
+        setTimeout(() => {
+            document.getElementById('loading').textContent = 'Loading MegaCity6...';
+        }, 1000);
         
         setTimeout(() => {
             document.getElementById('loading').style.display = 'none';
@@ -616,6 +629,11 @@ class GTA6Game {
             
             if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') {
                 this.startRunning();
+            }
+            
+            // Camera switching
+            if (e.code === 'KeyV') {
+                this.switchCameraMode();
             }
             
             // Weapon switching
@@ -1384,8 +1402,8 @@ class GTA6Game {
         // Update weapon position
         this.updateWeaponPosition();
         
-        // Update camera for character
-        this.updateCharacterCamera();
+        // Update camera to follow character
+        this.updateCamera();
         
         // Update stamina display
         this.updateStaminaDisplay();
@@ -1422,18 +1440,6 @@ class GTA6Game {
         return staminaBar;
     }
     
-    updateCharacterCamera() {
-        if (!this.character) return;
-        
-        const idealOffset = new THREE.Vector3(0, 5, 8);
-        idealOffset.applyMatrix4(this.character.matrixWorld);
-        
-        this.camera.position.lerp(idealOffset, 0.1);
-        
-        const lookAtTarget = new THREE.Vector3(0, 2, -2);
-        lookAtTarget.applyMatrix4(this.character.matrixWorld);
-        this.camera.lookAt(lookAtTarget);
-    }
     
     createAudio() {
         this.audioContext = new (window.AudioContext || window.webkitAudioContext());
@@ -1551,15 +1557,134 @@ class GTA6Game {
         this.updateCamera();
     }
     
+    switchCameraMode() {
+        this.currentCameraIndex = (this.currentCameraIndex + 1) % this.cameraModes.length;
+        this.cameraMode = this.cameraModes[this.currentCameraIndex];
+        this.cameraTransition = 0;
+        
+        const modeNames = {
+            'third_person': 'Third Person',
+            'first_person': 'First Person',
+            'cinematic': 'Cinematic',
+            'side_view': 'Side View',
+            'overhead': 'Overhead'
+        };
+        
+        this.mission = `Camera: ${modeNames[this.cameraMode]}`;
+    }
+    
     updateCamera() {
-        if (this.inVehicle && this.vehicle) {
-            const idealOffset = new THREE.Vector3(0, 8, 15);
-            idealOffset.applyMatrix4(this.vehicle.matrixWorld);
-            
-            this.camera.position.lerp(idealOffset, 0.1);
-            
-            const lookAtTarget = new THREE.Vector3(0, 2, -10);
-            lookAtTarget.applyMatrix4(this.vehicle.matrixWorld);
+        const targetPosition = this.inVehicle ? this.vehicle.position : this.character?.position;
+        if (!targetPosition) return;
+        
+        // Smooth transition
+        this.cameraTransition = Math.min(1, this.cameraTransition + this.cameraTransitionSpeed);
+        
+        let idealOffset, lookAtTarget;
+        
+        switch (this.cameraMode) {
+            case 'third_person':
+                if (this.inVehicle && this.vehicle) {
+                    idealOffset = new THREE.Vector3(0, 8, 15);
+                    idealOffset.applyMatrix4(this.vehicle.matrixWorld);
+                    
+                    lookAtTarget = new THREE.Vector3(0, 2, -10);
+                    lookAtTarget.applyMatrix4(this.vehicle.matrixWorld);
+                } else if (this.character) {
+                    idealOffset = new THREE.Vector3(0, 5, 8);
+                    idealOffset.applyMatrix4(this.character.matrixWorld);
+                    
+                    lookAtTarget = new THREE.Vector3(0, 2, -2);
+                    lookAtTarget.applyMatrix4(this.character.matrixWorld);
+                }
+                break;
+                
+            case 'first_person':
+                if (this.inVehicle && this.vehicle) {
+                    idealOffset = new THREE.Vector3(0, 3, 2);
+                    idealOffset.applyMatrix4(this.vehicle.matrixWorld);
+                    
+                    lookAtTarget = new THREE.Vector3(0, 3, -20);
+                    lookAtTarget.applyMatrix4(this.vehicle.matrixWorld);
+                } else if (this.character) {
+                    idealOffset = new THREE.Vector3(0, 5.5, 0.5);
+                    idealOffset.applyMatrix4(this.character.matrixWorld);
+                    
+                    lookAtTarget = new THREE.Vector3(0, 5.5, -20);
+                    lookAtTarget.applyMatrix4(this.character.matrixWorld);
+                }
+                break;
+                
+            case 'cinematic':
+                if (this.inVehicle && this.vehicle) {
+                    const angle = Date.now() * 0.0005;
+                    const distance = 25;
+                    idealOffset = new THREE.Vector3(
+                        Math.sin(angle) * distance,
+                        15,
+                        Math.cos(angle) * distance
+                    );
+                    idealOffset.add(this.vehicle.position);
+                    
+                    lookAtTarget = this.vehicle.position.clone();
+                    lookAtTarget.y += 2;
+                } else if (this.character) {
+                    const angle = Date.now() * 0.0003;
+                    const distance = 15;
+                    idealOffset = new THREE.Vector3(
+                        Math.sin(angle) * distance,
+                        10,
+                        Math.cos(angle) * distance
+                    );
+                    idealOffset.add(this.character.position);
+                    
+                    lookAtTarget = this.character.position.clone();
+                    lookAtTarget.y += 2;
+                }
+                break;
+                
+            case 'side_view':
+                if (this.inVehicle && this.vehicle) {
+                    const right = new THREE.Vector3(1, 0, 0);
+                    right.applyQuaternion(this.vehicle.quaternion);
+                    idealOffset = this.vehicle.position.clone();
+                    idealOffset.add(right.multiplyScalar(20));
+                    idealOffset.y += 10;
+                    
+                    lookAtTarget = this.vehicle.position.clone();
+                    lookAtTarget.y += 2;
+                } else if (this.character) {
+                    const right = new THREE.Vector3(1, 0, 0);
+                    right.applyQuaternion(this.character.quaternion);
+                    idealOffset = this.character.position.clone();
+                    idealOffset.add(right.multiplyScalar(15));
+                    idealOffset.y += 8;
+                    
+                    lookAtTarget = this.character.position.clone();
+                    lookAtTarget.y += 2;
+                }
+                break;
+                
+            case 'overhead':
+                if (this.inVehicle && this.vehicle) {
+                    idealOffset = this.vehicle.position.clone();
+                    idealOffset.y += 50;
+                    
+                    lookAtTarget = this.vehicle.position.clone();
+                    lookAtTarget.y += 2;
+                } else if (this.character) {
+                    idealOffset = this.character.position.clone();
+                    idealOffset.y += 40;
+                    
+                    lookAtTarget = this.character.position.clone();
+                    lookAtTarget.y += 2;
+                }
+                break;
+        }
+        
+        if (idealOffset && lookAtTarget) {
+            // Smooth camera movement
+            this.camera.position.lerp(idealOffset, this.cameraTransition);
             this.camera.lookAt(lookAtTarget);
         }
     }
