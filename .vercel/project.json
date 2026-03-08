@@ -1,9 +1,1 @@
-{
-  "framework": "nextjs",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install",
-  "env": {
-    "DATABASE_URL": "@database_url"
-  }
-}
+{"projectId":"prj_Ir0wIT4DDKIkAGBk9rK5Fp5c3QYd","orgId":"team_SgzPg4SPUrfb5mEpDTGotfwC","projectName":"mega-city6"}

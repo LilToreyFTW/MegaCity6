@@ -80,7 +80,6 @@ export default function Home() {
               if (authError) {
               authError.textContent = 'Please enter a username'
               authError.style.display = 'block'
-            }
               return
             }
 
@@ -89,6 +88,7 @@ export default function Home() {
             loginBtn.disabled = true
             if (authError) authError.style.display = 'none'
 
+            try {
             const result = await gameDatabase.loginPlayer(username)
             if (result.success) {
               console.log('Login successful, starting game...')
@@ -103,6 +103,7 @@ export default function Home() {
               loginBtn.textContent = 'Enter Game'
               loginBtn.disabled = false
             }
+          }
           }
         })
       }
@@ -352,82 +353,191 @@ export default function Home() {
     // Make startGame globally available
     window.startGame = startGame
     
-    // Initialize game when Three.js is loaded
+    // Initialize game
     const initializeGame = async () => {
       try {
-        // Wait for all dependencies to load
-        let attempts = 0
-        while (attempts < 100) {
-          if (typeof THREE !== 'undefined' && 
-              typeof GTA6Game !== 'undefined' && 
-              typeof gameDatabase !== 'undefined') {
-            break
+        console.log('Initializing MegaCity6...')
+        
+        // Wait for basic dependencies
+        await waitForDependencies()
+        
+        // Setup authentication UI
+        setupAuthUI()
+        
+        // Try auto-login first
+        const autoLoginResult = await tryAutoLogin()
+        
+        if (autoLoginResult.success) {
+          console.log('Auto-login successful, starting game...')
+          startGame()
+        } else {
+          // Show authentication modal
+          const authModal = document.getElementById('auth-modal')
+          if (authModal) {
+            authModal.style.display = 'flex'
           }
+          
+          // Hide loading screen
+          const loadingScreen = document.getElementById('loading-screen')
+          if (loadingScreen) {
+            loadingScreen.style.display = 'none'
+          }
+          
+          // Add fallback option to play without authentication
+          setTimeout(() => {
+            const authContainer = document.querySelector('.auth-container')
+            if (authContainer) {
+              const fallbackBtn = document.createElement('button')
+              fallbackBtn.textContent = 'Play Without Login (Guest Mode)'
+              fallbackBtn.style.cssText = `
+                margin-top: 20px;
+                padding: 10px 20px;
+                background: #6c757d;
+                color: white;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+                font-size: 14px;
+              `
+              fallbackBtn.addEventListener('click', () => {
+                console.log('Starting game in guest mode...')
+                startGameAsGuest()
+              })
+              authContainer.appendChild(fallbackBtn)
+            }
+          }, 2000)
+        }
+        
+      } catch (error) {
+        console.error('Game initialization failed:', error)
+        // Fallback: start game anyway
+        startGameAsGuest()
+      }
+    }
+
+    // Wait for dependencies to load
+    const waitForDependencies = async () => {
+      const maxWait = 10000 // 10 seconds
+      const start = Date.now()
+      
+      while (Date.now() - start < maxWait) {
+        if (typeof THREE !== 'undefined' && typeof GTA6Game !== 'undefined') {
+          console.log('Dependencies loaded successfully')
+          return
+        }
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+      
+      console.warn('Dependencies not fully loaded, proceeding anyway...')
+    }
+
+    // Try auto-login
+    const tryAutoLogin = async () => {
+      try {
+        if (typeof gameDatabase !== 'undefined' && gameDatabase.getCurrentPlayer) {
+          const currentPlayer = gameDatabase.getCurrentPlayer()
+          if (currentPlayer) {
+            console.log('Found logged in user:', currentPlayer.username)
+            return { success: true, player: currentPlayer }
+          }
+        }
+      } catch (error) {
+        console.warn('Auto-login failed:', error)
+      }
+      return { success: false }
+    }
+
+    // Start game as guest (fallback)
+    const startGameAsGuest = async () => {
+      try {
+        console.log('Starting game in guest mode...')
+        
+        // Hide auth modal
+        const authModal = document.getElementById('auth-modal')
+        if (authModal) {
+          authModal.style.display = 'none'
+        }
+        
+        // Show loading screen
+        const loadingScreen = document.getElementById('loading-screen')
+        if (loadingScreen) {
+          loadingScreen.style.display = 'flex'
+          loadingScreen.innerHTML = '<h1>Starting Game (Guest Mode)...</h1><div className="loading-spinner"></div>'
+        }
+        
+        // Wait for THREE.js
+        let attempts = 0
+        while (typeof THREE === 'undefined' && attempts < 50) {
           await new Promise(resolve => setTimeout(resolve, 100))
           attempts++
         }
         
         if (typeof THREE === 'undefined') {
-          console.error('Three.js failed to load')
-          return
+          throw new Error('Three.js failed to load')
         }
+        
+        // Wait for game scripts
+        await new Promise(resolve => setTimeout(resolve, 500))
         
         if (typeof GTA6Game === 'undefined') {
-          console.error('Game scripts failed to load')
-          return
+          throw new Error('Game scripts failed to load')
         }
         
-        if (typeof gameDatabase === 'undefined') {
-          console.error('Database manager failed to load')
-          return
+        // Create game instance
+        window.game = new GTA6Game()
+        
+        // Wait for game to initialize
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        
+        // Set guest player data
+        if (window.game) {
+          window.game.money = 1000
+          window.game.bankMoney = 5000
+          window.game.characterHealth = 100
+          window.game.characterArmor = 0
+          window.game.wantedLevel = 0
+          window.game.currentWeapon = 'pistol'
+          window.game.experience = 0
         }
         
-        console.log('All dependencies loaded, setting up authentication...')
-        
-        // Setup authentication UI
-        setupAuthUI()
-        
-        // Check if user is already logged in (from localStorage)
-        const savedUsername = localStorage.getItem('megaCity6_username')
-        if (savedUsername) {
-          console.log('Found saved user:', savedUsername)
-          // Auto-login if username is saved
-          try {
-            const result = await gameDatabase.loginPlayer(savedUsername)
-            if (result.success) {
-              startGame()
-              return
-            }
-          } catch (error) {
-            console.warn('Auto-login failed:', error)
-          }
-        }
-        
-        // Show authentication modal if not auto-logged in
-        const authModal = document.getElementById('auth-modal')
-        const loadingScreen = document.getElementById('loading-screen')
-        
+        // Hide loading screen
         if (loadingScreen) {
           loadingScreen.style.display = 'none'
         }
         
-        if (authModal) {
-          authModal.style.display = 'flex'
+        console.log('Game started successfully in guest mode!')
+        
+        // Update UI with guest data
+        try {
+          await new Promise(resolve => setTimeout(resolve, 100))
+          
+          window.safeSetText('health', 100)
+          window.safeSetText('armor', 0)
+          window.safeSetText('money', 1000)
+          window.safeSetText('wanted', 0)
+        } catch (uiError) {
+          console.warn('Failed to update UI:', uiError)
         }
         
       } catch (error) {
-        console.error('Game initialization error:', error)
+        console.error('Failed to start game in guest mode:', error)
         const loadingScreen = document.getElementById('loading-screen')
         if (loadingScreen) {
           loadingScreen.innerHTML = `
-            <h1>Initialization Error</h1>
+            <h1>Game Failed to Start</h1>
             <p>${error.message}</p>
-            <button onclick="location.reload()" style="padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Reload Page</button>
+            <div style="margin-top: 20px;">
+              <button onclick="location.reload()" style="padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">Refresh Page</button>
+              <button onclick="window.startGameAsGuest()" style="padding: 10px 20px; margin: 5px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;">Try Guest Mode</button>
+            </div>
           `
           loadingScreen.style.display = 'flex'
         }
       }
     }
+
+    // Make guest mode globally available
+    window.startGameAsGuest = startGameAsGuest
 
     // Start initialization after component mounts
     setTimeout(() => {
@@ -454,6 +564,7 @@ export default function Home() {
       <Script src="/updater.js" strategy="afterInteractive" />
       <Script src="/test/quick-stress-test.js" strategy="afterInteractive" />
       <Script src="/test/stress-test.js" strategy="afterInteractive" />
+      <Script src="/test/extreme-stress-test.js" strategy="afterInteractive" />
       
       <div id="game-container">
         <canvas id="gameCanvas" style={{ display: 'block', width: '100%', height: '100%' }}></canvas>
